@@ -14,15 +14,36 @@ for _ in range(7):
     next(transactions)
 
 for row in transactions:
-    # correct date format
-    date = datetime.datetime.strptime(row[0], '%d.%m.%Y').strftime('%Y-%m-%d')
-    recipient = row[3].replace(',', ' ')
-    comment = row[4].replace(',', ' ')
-    # delete weird DKB markup in the Verwendungszweck
-    if comment.find('<br />') != -1:
-        comment = "Abrechnung DKB"
-    # correct value format
-    value = parse_decimal(row[7], locale='de')
-    if value == 0:
-        continue
-    print("{0}, {1}, {2}, {3}".format(date, value, recipient, comment))
+    # VISA
+    if row[0] in ["Nein", "Ja"]:
+      date = datetime.datetime.strptime(row[1], '%d.%m.%Y').strftime('%Y-%m-%d')
+      date_booking = datetime.datetime.strptime(row[2], '%d.%m.%Y').strftime('%Y-%m-%d')
+      value = parse_decimal(row[4], locale='de')
+      comment = row[3].replace(',', ' ')
+      if comment == 'Einzahlung' or comment[:9] == 'Ausgleich':
+        continue  # Einzahlungen ignorieren
+      if value >= 0:
+        value_original = value
+        currency = ''
+      elif row[5]:
+        value_original = parse_decimal(row[5][:-3], locale='de')
+        currency = row[5][-3:]
+        value = -value
+      else:
+        value_original = value
+        value = -value
+        currency = ''
+      print("\"{0}\",\"{1}\",\"{2}\",\"{3} {4}\",\"{5}\"".format(date, date_booking, value, value_original, currency, comment))
+    else:
+      # correct date format
+      date = datetime.datetime.strptime(row[0], '%d.%m.%Y').strftime('%Y-%m-%d')
+      recipient = row[3].replace(',', ' ')
+      comment = row[4].replace(',', ' ')
+      # delete weird DKB markup in the Verwendungszweck
+      if comment.find('<br />') != -1:
+          comment = "Abrechnung DKB"
+      # correct value format
+      value = parse_decimal(row[7], locale='de')
+      if value == 0:
+          continue
+      print("\"{0}\",\"{1}\",\"{2}\",\"{3}\"".format(date, value, recipient, comment))
